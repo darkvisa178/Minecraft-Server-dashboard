@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft Server Control</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+.card {
+    background: #1a1a2e;
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 860px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border: 1px solid #2a2a4a;
+}
+h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #2a2a4a;
+    margin-bottom: 20px;
+}
+.tab {
+    padding: 10px 24px;
+    cursor: pointer;
+    color: #888;
+    font-weight: 600;
+    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    user-select: none;
+}
+.tab:hover { color: #ccc; }
+.tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 20px;
+    background: #12122a;
+    border-radius: 12px;
+    border: 1px solid #2a2a4a;
+    margin-bottom: 12px;
+}
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 18px;
+    font-weight: 600;
+}
+.dot {
+    width: 16px; height: 16px; border-radius: 50%; display: inline-block; flex-shrink: 0;
+}
+.dot.running { background: #4CAF50; box-shadow: 0 0 12px rgba(76,175,80,0.5); }
+.dot.stopped { background: #f44336; box-shadow: 0 0 12px rgba(244,67,54,0.5); }
+.dot.starting { background: #FF9800; animation: pulse 0.8s ease-in-out infinite; }
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+    padding: 10px 24px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; gap: 8px; color: #fff;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-start { background: #4CAF50; }
+.btn-start:hover:not(:disabled) { background: #43A047; }
+.btn-stop { background: #f44336; }
+.btn-stop:hover:not(:disabled) { background: #E53935; }
+.btn-logout { background: #37474F; font-size: 12px; padding: 4px 12px; }
+.btn-logout:hover { background: #455A64; }
+.btn-copy { background: #37474F; font-size: 13px; padding: 6px 14px; }
+.btn-copy:hover:not(:disabled) { background: #455A64; }
+
+.player-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 10px 20px;
+    background: #12122a;
+    border-radius: 10px;
+    border: 1px solid #2a2a4a;
+    margin-bottom: 12px;
+    font-size: 14px;
+    min-height: 42px;
+}
+.player-count { font-weight: 600; color: #58a6ff; }
+.player-tag {
+    display: inline-block;
+    background: #1f3a5f;
+    color: #58a6ff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+}
+.auto-stop-warn { color: #f44336; font-weight: 600; animation: pulse 0.8s ease-in-out infinite; }
+.auto-stop-idle { color: #888; }
+
+.info-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 20px;
+    background: #12122a;
+    border-radius: 12px;
+    border: 1px solid #2a2a4a;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+.info-bar a { color: #58a6ff; text-decoration: none; }
+.info-bar a:hover { text-decoration: underline; color: #79b8ff; }
+.server-addr {
+    background: #0d1117; padding: 4px 10px; border-radius: 6px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px; color: #4CAF50; cursor: pointer;
+    user-select: all; border: 1px solid #2a2a4a;
+}
+.server-addr:hover { border-color: #4CAF50; }
+
+.console-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px; font-size: 13px; color: #888;
+}
+.log-container {
+    background: #0d1117; border-radius: 10px; border: 1px solid #2a2a4a;
+    padding: 14px; height: 400px; overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px; line-height: 1.6; color: #c9d1d9;
+}
+.log-container:empty::after {
+    content: 'Waiting for server log...';
+    color: #555; font-style: italic;
+}
+.log-line { white-space: pre-wrap; word-break: break-all; }
+.log-line.info { color: #58a6ff; }
+.log-line.warn { color: #d29922; }
+.log-line.error { color: #f85149; }
+
+.spinner {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Login overlay */
+.overlay {
+    display: none;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7);
+    align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.overlay.show { display: flex; }
+.login-box {
+    background: #1a1a2e; padding: 32px; border-radius: 16px;
+    border: 1px solid #2a2a4a; width: 100%; max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.login-box h2 { margin-bottom: 16px; font-size: 18px; color: #fff; }
+.login-box input {
+    width: 100%; padding: 12px 16px; margin-bottom: 12px;
+    background: #0d1117; border: 1px solid #2a2a4a; border-radius: 8px;
+    color: #e0e0e0; font-size: 15px; outline: none;
+}
+.login-box input:focus { border-color: #58a6ff; }
+.login-box .error { color: #f44336; font-size: 13px; margin-top: -8px; margin-bottom: 12px; display: none; }
+.login-box .btn { width: 100%; justify-content: center; }
+.login-box .btn { background: #58a6ff; }
+.login-box .btn:hover { background: #4797e8; }
+
+@media (max-width: 600px) {
+    .card { padding: 16px; }
+    .status-bar { flex-direction: column; align-items: stretch; }
+    .actions { justify-content: stretch; }
+    .actions .btn { flex: 1; justify-content: center; }
+    .log-container { height: 250px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<div class="card">
+    <h1>⚡ Minecraft Server</h1>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('dashboard')">📊 Dashboard</div>
+        <div class="tab" onclick="switchTab('console')">🖥 Console</div>
+    </div>
+
+    <!-- Dashboard tab -->
+    <div class="tab-content active" id="tab-dashboard">
+        <div class="status-bar">
+            <div class="status-indicator">
+                <span class="dot stopped" id="status-dot"></span>
+                <span id="status-text">Checking...</span>
+            </div>
+            <div class="actions">
+                <button class="btn btn-start" id="dash-btn-start" style="display:none" onclick="dashStart()">▶ Start</button>
+            </div>
+        </div>
+
+        <div class="player-bar" id="player-bar" style="display:none">
+            <span>👤 Players: <span class="player-count" id="player-count">0</span></span>
+            <span id="player-names"></span>
+            <span class="auto-stop-idle" id="auto-stop-text"></span>
+        </div>
+
+        <div class="info-bar">
+            <span>📦 <a href="https://www.curseforge.com/minecraft/modpacks/create-chronicles-the-endventure" target="_blank" rel="noopener">Create Chronicles: The Endventure</a></span>
+            <span>🌐 MC: <span class="server-addr" onclick="navigator.clipboard.writeText('play.quickpublic.myddns.me')" title="Click to copy">play.quickpublic.myddns.me</span></span>
+            <span>🔊 <a href="https://www.teamspeak.com/ru/downloads/#ts3client" target="_blank" rel="noopener">TeamSpeak 3</a>: <span class="server-addr" onclick="navigator.clipboard.writeText('quickpublic.myddns.me')" title="Click to copy">quickpublic.myddns.me</span></span>
+        </div>
+    </div>
+
+    <!-- Console tab -->
+    <div class="tab-content" id="tab-console">
+        <div id="console-unlocked">
+            <div class="status-bar">
+                <div class="status-indicator">
+                    <span class="dot stopped" id="console-status-dot"></span>
+                    <span id="console-status-text">Checking...</span>
+                </div>
+                <div class="actions" style="display:flex;gap:10px;align-items:center">
+                    <button class="btn btn-start" id="btn-start" style="display:none" onclick="startServer()">▶ Start</button>
+                    <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="stopServer()">⏹ Stop</button>
+                    <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+
+            <div class="console-header">
+                <span>🖥 Console</span>
+                <button class="btn btn-copy" onclick="copyLog()">📋 Copy</button>
+            </div>
+            <div class="log-container" id="log"></div>
+            <div style="display:flex;gap:8px;margin-top:10px">
+                <input type="text" id="cmd-input" placeholder="Send command..." style="flex:1;padding:10px 14px;background:#0d1117;border:1px solid #2a2a4a;border-radius:8px;color:#e0e0e0;font-family:'Courier New',monospace;font-size:13px;outline:none" onkeydown="if(event.key==='Enter')sendCommand()">
+                <button class="btn" style="background:#58a6ff;padding:10px 18px;font-size:13px" onclick="sendCommand()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Login overlay -->
+<div class="overlay" id="login-overlay">
+    <div class="login-box">
+        <h2>🔒 Console Access</h2>
+        <input type="password" id="login-password" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="error" id="login-error">Wrong password</div>
+        <button class="btn" onclick="doLogin()">Unlock</button>
+    </div>
+</div>
+
+<script>
+let es = null;
+let lastPc = 0;
+let lastPn = [];
+let lastAutoStop = null;
+let lastAutoStopTime = 0;
+let currentTab = 'dashboard';
+
+function switchTab(name) {
+    currentTab = name;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.textContent.includes(name === 'dashboard' ? 'Dashboard' : 'Console')));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.toggle('active', t.id === 'tab-' + name));
+    if (name === 'console') {
+        document.getElementById('login-overlay').classList.remove('show');
+        checkAuth();
+    }
+}
+
+async function checkAuth() {
+    try {
+        const r = await fetch('/api/check-auth');
+        const data = await r.json();
+        if (!data.authenticated) {
+            if (es) { es.close(); es = null; }
+            document.getElementById('login-overlay').classList.add('show');
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').style.display = 'none';
+            document.getElementById('login-password').focus();
+        } else {
+            document.getElementById('login-overlay').classList.remove('show');
+            if (!es) connectLog();
+        }
+    } catch(e) {}
+}
+
+async function doLogin() {
+    const pw = document.getElementById('login-password').value;
+    try {
+        const r = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: pw})
+        });
+        if (r.ok) {
+            document.getElementById('login-overlay').classList.remove('show');
+            if (!es) connectLog();
+        } else {
+            document.getElementById('login-error').style.display = 'block';
+        }
+    } catch(e) {}
+}
+
+async function logout() {
+    await fetch('/api/logout', { method: 'POST' });
+    if (es) { es.close(); es = null; }
+    sessionStorage.clear();
+    switchTab('dashboard');
+}
+
+function connectLog() {
+    if (es) es.close();
+    es = new EventSource('/api/log');
+    es.onmessage = function(e) {
+        const container = document.getElementById('log');
+        const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+        const line = document.createElement('div');
+        line.className = 'log-line';
+        line.textContent = e.data;
+        if (e.data.includes('[WARN]') || e.data.includes('WARN')) line.classList.add('warn');
+        else if (e.data.includes('[ERROR]') || e.data.includes('ERROR') || e.data.includes('[FATAL]')) line.classList.add('error');
+        else if (e.data.includes('[INFO]') || e.data.includes('[SYSTEM]')) line.classList.add('info');
+        container.appendChild(line);
+        while (container.children.length > 500) container.removeChild(container.firstChild);
+        if (isAtBottom) container.scrollTop = container.scrollHeight;
+    };
+    es.onerror = function() {
+        if (currentTab === 'console') checkAuth();
+    };
+}
+
+function fmt(sec) {
+    if (sec == null) return '';
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+}
+
+function updateDashboard(data) {
+    const dot = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    const btn = document.getElementById('dash-btn-start');
+    dot.className = 'dot ' + data.status;
+    if (data.status === 'running') {
+        text.textContent = '🟢 Server is running';
+        btn.style.display = 'none';
+    } else if (data.status === 'starting') {
+        text.textContent = '🟡 Starting server...';
+        btn.style.display = '';
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Starting...';
+    } else {
+        text.textContent = '🔴 Server is stopped';
+        btn.style.display = '';
+        btn.disabled = false;
+        btn.innerHTML = '▶ Start';
+    }
+}
+
+async function dashStart() {
+    const btn = document.getElementById('dash-btn-start');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Starting...';
+    try {
+        const r = await fetch('/api/start', { method: 'POST' });
+    } catch(e) {}
+}
+
+function updateConsoleStatus(data) {
+    const dot = document.getElementById('console-status-dot');
+    const text = document.getElementById('console-status-text');
+    const btnStart = document.getElementById('btn-start');
+    const btnStop = document.getElementById('btn-stop');
+    dot.className = 'dot ' + data.status;
+    btnStart.style.display = 'none';
+    btnStop.style.display = 'none';
+    if (data.status === 'running') {
+        text.textContent = '🟢 Running';
+        btnStop.style.display = '';
+        const online = lastPc;
+        if (online > 0) {
+            btnStop.disabled = true;
+            btnStop.title = 'Players online: ' + lastPn.join(', ');
+            btnStop.innerHTML = '⏹ Stop (' + online + ' online)';
+        } else {
+            btnStop.disabled = false;
+            btnStop.title = '';
+            btnStop.innerHTML = '⏹ Stop';
+        }
+    } else if (data.status === 'starting') {
+        text.textContent = '🟡 Starting...';
+        btnStart.style.display = '';
+        btnStart.disabled = true;
+        btnStart.innerHTML = '<span class="spinner"></span> Starting...';
+    } else {
+        text.textContent = '🔴 Stopped';
+        btnStart.style.display = '';
+        btnStart.disabled = false;
+        btnStart.innerHTML = '▶ Start';
+        btnStop.style.display = 'none';
+        if (es) { es.close(); es = null; }
+    }
+}
+
+function updatePlayers(data) {
+    const bar = document.getElementById('player-bar');
+    const elCount = document.getElementById('player-count');
+    const elNames = document.getElementById('player-names');
+
+    if (data.count != null) {
+        bar.style.display = 'flex';
+        elCount.textContent = data.count;
+    }
+    if (data.names && data.names.length > 0) {
+        elNames.innerHTML = data.names.map(n => '<span class="player-tag">' + n + '</span>').join(' ');
+    } else {
+        elNames.innerHTML = '';
+    }
+    lastPc = data.count;
+    lastPn = data.names || [];
+    lastAutoStop = data.auto_stop_seconds;
+    lastAutoStopTime = Date.now();
+}
+
+function updateTimerDisplay() {
+    const el = document.getElementById('auto-stop-text');
+    if (lastAutoStop == null || lastAutoStopTime === 0) {
+        el.textContent = '';
+        return;
+    }
+    const elapsed = Math.floor((Date.now() - lastAutoStopTime) / 1000);
+    const remaining = Math.max(0, lastAutoStop - elapsed);
+    if (remaining <= 0) { el.textContent = '⏳ Stopping...'; el.className = 'auto-stop-warn'; return; }
+    el.className = remaining <= 60 ? 'auto-stop-warn' : 'auto-stop-idle';
+    el.textContent = '⏳ Auto-stop in ' + fmt(remaining);
+}
+
+async function pollAll() {
+    try {
+        const [sr, pr] = await Promise.all([
+            fetch('/api/status'),
+            fetch('/api/players')
+        ]);
+        const status = await sr.json();
+        const players = await pr.json();
+        updatePlayers(players);
+        updateDashboard(status);
+        updateConsoleStatus(status);
+    } catch(e) {
+        document.getElementById('status-text').textContent = '❌ Connection error';
+    }
+}
+
+async function startServer() {
+    const btn = document.getElementById('btn-start');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Starting...';
+    try {
+        const r = await fetch('/api/start', { method: 'POST' });
+        if (r.status === 401) { checkAuth(); return; }
+    } catch(e) {}
+    document.getElementById('console-status-dot').className = 'dot starting';
+    if (!es) connectLog();
+}
+
+async function stopServer() {
+    const btn = document.getElementById('btn-stop');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Stopping...';
+    try {
+        const r = await fetch('/api/stop', { method: 'POST' });
+        if (r.status === 401) { checkAuth(); return; }
+        if (!r.ok) {
+            const data = await r.json();
+            if (data.error) alert(data.error);
+            btn.disabled = false; btn.innerHTML = '⏹ Stop';
+            return;
+        }
+    } catch(e) {}
+}
+
+async function sendCommand() {
+    const input = document.getElementById('cmd-input');
+    const cmd = input.value.trim();
+    if (!cmd) return;
+    input.value = '';
+    try {
+        const r = await fetch('/api/command', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({command: cmd})
+        });
+        if (r.status === 401) { checkAuth(); return; }
+    } catch(e) {}
+}
+
+function copyLog() {
+    const container = document.getElementById('log');
+    const lines = [];
+    for (const child of container.children) lines.push(child.textContent);
+    navigator.clipboard.writeText(lines.join('\n'));
+}
+
+setInterval(pollAll, 5000);
+setInterval(updateTimerDisplay, 1000);
+setInterval(() => { if (currentTab === 'console') checkAuth(); }, 30000);  // re-check auth every 30s
+pollAll();
+</script>
+</body>
+</html>

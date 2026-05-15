@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      - "127.0.0.1:4444:5000"
+    volumes:
+      - ./ssh:/ssh
+    env_file:
+      - .env
+    environment:
+      - HOST_IP=172.17.0.1
+      - SSH_USER=user
+      - MINECRAFT_DIR=/home/user/minecraft
+    restart: unless-stopped
