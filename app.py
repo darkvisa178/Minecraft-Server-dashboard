@@ -28,6 +28,10 @@ MINECRAFT_DIR = os.environ.get('MINECRAFT_DIR', '/home/user/minecraft')
 MINECRAFT_PORT = int(os.environ.get('MINECRAFT_PORT', '25565'))
 RCON_PORT = int(os.environ.get('RCON_PORT', '25575'))
 RCON_PASSWORD = os.environ.get('RCON_PASSWORD', SSH_PASSWORD)
+MODPACK_URL = os.environ.get('MODPACK_URL', '')
+MODPACK_NAME = os.environ.get('MODPACK_NAME', '')
+MC_ADDRESS = os.environ.get('MC_ADDRESS', '')
+TS_ADDRESS = os.environ.get('TS_ADDRESS', '')
 
 starting = False
 AUTO_STOP_DELAY = 900
@@ -259,7 +263,11 @@ def add_security_headers(response):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html',
+                           mc_address=MC_ADDRESS,
+                           ts_address=TS_ADDRESS,
+                           modpack_url=MODPACK_URL,
+                           modpack_name=MODPACK_NAME)
 
 
 @app.route('/api/status')

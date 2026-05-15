@@ -11,4 +11,9 @@ services:
       - HOST_IP=172.17.0.1
       - SSH_USER=user
       - MINECRAFT_DIR=/home/user/minecraft
+      # Info bar — set these to show in dashboard:
+      # - MODPACK_URL=https://example.com/modpack
+      # - MODPACK_NAME=My Modpack
+      # - MC_ADDRESS=play.example.com
+      # - TS_ADDRESS=ts.example.com
     restart: unless-stopped

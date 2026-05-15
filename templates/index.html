@@ -237,9 +237,15 @@ h1 {
         </div>
 
         <div class="info-bar">
-            <span>📦 <a href="https://www.curseforge.com/minecraft/modpacks/create-chronicles-the-endventure" target="_blank" rel="noopener">Create Chronicles: The Endventure</a></span>
-            <span>🌐 MC: <span class="server-addr" onclick="navigator.clipboard.writeText('play.quickpublic.myddns.me')" title="Click to copy">play.quickpublic.myddns.me</span></span>
-            <span>🔊 <a href="https://www.teamspeak.com/ru/downloads/#ts3client" target="_blank" rel="noopener">TeamSpeak 3</a>: <span class="server-addr" onclick="navigator.clipboard.writeText('quickpublic.myddns.me')" title="Click to copy">quickpublic.myddns.me</span></span>
+            {% if modpack_name and modpack_url %}
+            <span>📦 <a href="{{ modpack_url }}" target="_blank" rel="noopener">{{ modpack_name }}</a></span>
+            {% endif %}
+            {% if mc_address %}
+            <span>🌐 MC: <span class="server-addr" onclick="navigator.clipboard.writeText('{{ mc_address }}')" title="Click to copy">{{ mc_address }}</span></span>
+            {% endif %}
+            {% if ts_address %}
+            <span>🔊 <a href="https://www.teamspeak.com/ru/downloads/#ts3client" target="_blank" rel="noopener">TeamSpeak 3</a>: <span class="server-addr" onclick="navigator.clipboard.writeText('{{ ts_address }}')" title="Click to copy">{{ ts_address }}</span></span>
+            {% endif %}
         </div>
     </div>
 
